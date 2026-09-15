@@ -21,17 +21,33 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Show Android environment
+      - name: Locate Android SDK
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          which sdkmanager || true
-          sdkmanager --version || true
+          find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null || true
 
       - name: Install Android SDK 37
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n 1)
+          fi
+
+          echo "Using sdkmanager: $SDKMANAGER"
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager introuvable"
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-37" \
+            "build-tools;36.0.0"
 
       - name: Set up Gradle 9.6.0
         uses: gradle/actions/setup-gradle@v4
