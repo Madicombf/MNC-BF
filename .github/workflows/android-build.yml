@@ -3,8 +3,8 @@ name: Build MNC-BF Android
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
-  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -21,8 +21,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Show Android environment
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          which sdkmanager || true
+          sdkmanager --version || true
 
       - name: Install Android SDK 37
         run: |
@@ -33,6 +37,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
+
+      - name: Gradle version
+        run: gradle --version
 
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace
