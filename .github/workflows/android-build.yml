@@ -25,29 +25,83 @@ jobs:
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+
+          echo "Recherche de sdkmanager..."
           find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null || true
+
+      - name: Update Android command-line tools
+        run: |
+          OLD_SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$OLD_SDKMANAGER" ]; then
+            OLD_SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n 1)
+          fi
+
+          echo "Initial sdkmanager: $OLD_SDKMANAGER"
+
+          if [ -z "$OLD_SDKMANAGER" ]; then
+            echo "ERREUR : sdkmanager introuvable."
+            exit 1
+          fi
+
+          "$OLD_SDKMANAGER" --version
+
+          yes | "$OLD_SDKMANAGER" --licenses >/dev/null || true
+
+          echo "Mise à jour des Android Command-line Tools..."
+          "$OLD_SDKMANAGER" --channel=3 --install "cmdline-tools;latest"
 
       - name: Install Android SDK 37
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 
           if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n 1)
+            SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f | sort -V | tail -n 1)
           fi
 
           echo "Using sdkmanager: $SDKMANAGER"
 
           if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager introuvable"
+            echo "ERREUR : sdkmanager introuvable après mise à jour."
             exit 1
           fi
 
+          echo "Version de sdkmanager :"
+          "$SDKMANAGER" --version
+
+          echo "Recherche des packages Android API 37 disponibles..."
+          "$SDKMANAGER" --list --channel=3 | grep -E "platforms;android-37|build-tools;" || true
+
           yes | "$SDKMANAGER" --licenses >/dev/null || true
 
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-37" \
-            "build-tools;36.0.0"
+          echo "Installation de platform-tools..."
+          "$SDKMANAGER" --channel=3 "platform-tools"
+
+          echo "Installation de Android API 37..."
+          "$SDKMANAGER" --channel=3 "platforms;android-37"
+
+          echo "Installation de Build Tools 36.0.0..."
+          "$SDKMANAGER" "build-tools;36.0.0"
+
+          echo "Android SDK installé :"
+          ls -la "$ANDROID_HOME/platforms" || true
+          ls -la "$ANDROID_HOME/build-tools" || true
+
+      - name: Verify Android SDK 37
+        run: |
+          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            echo "ERREUR : Android SDK Platform 37 n'est pas installé."
+            exit 1
+          fi
+
+          echo "Android SDK Platform 37 détecté avec succès."
+
+          if [ ! -d "$ANDROID_HOME/build-tools/36.0.0" ]; then
+            echo "ERREUR : Android Build Tools 36.0.0 introuvable."
+            exit 1
+          fi
+
+          echo "Android Build Tools 36.0.0 détecté avec succès."
 
       - name: Set up Gradle 9.6.0
         uses: gradle/actions/setup-gradle@v4
@@ -55,13 +109,29 @@ jobs:
           gradle-version: '9.6.0'
 
       - name: Gradle version
-        run: gradle --version
+        run: |
+          gradle --version
 
       - name: Unit tests
-        run: gradle testDebugUnitTest --stacktrace
+        run: |
+          gradle testDebugUnitTest --stacktrace
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          gradle assembleDebug --stacktrace
+
+      - name: Verify APK
+        run: |
+          echo "Recherche de l'APK généré..."
+          find app/build/outputs/apk -type f -name "*.apk" -print
+
+          if [ ! -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "ERREUR : app-debug.apk n'a pas été généré."
+            exit 1
+          fi
+
+          echo "APK MNC-BF Alpha 0.2 généré avec succès."
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -69,3 +139,4 @@ jobs:
           name: MNC-BF-Alpha-0.2-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
