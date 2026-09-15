@@ -1,0 +1,44 @@
+MNC-BF Alpha 0.2 — Build status
+================================
+
+Version: 0.2.0-alpha
+Package: bf.itsmsolutions.mnc
+Owner: ITSM SOLUTIONS
+Author: Madi COMPAORÉ
+
+Implemented:
+- Alpha 0.1 LAN discovery foundation
+- MikroTik RouterOS 7 REST adapter
+- Basic authentication over REST
+- System identity/model/RouterOS/CPU/RAM/uptime dashboard
+- Interfaces and IP addresses
+- DHCP leases
+- Modern /interface/wifi and legacy /interface/wireless read support
+- Wi-Fi SSID/radio state editing
+- Static IP edit with confirmation
+- RouterOS configuration export (.rsc)
+- Reboot command
+- Activity logging
+- Android 17 local-network permission handling
+- GitHub Actions workflow for verified debug APK build
+
+Local validation performed in the ChatGPT build container:
+- Gradle version catalog TOML parsed successfully
+- AndroidManifest.xml and XML resources parsed successfully
+- MikroTik adapter Kotlin subset compiled successfully with kotlinc and local stubs
+- IPv4 /24 scan-range test compiled and executed successfully
+- Full-source Kotlin parser heuristic found no syntax/redeclaration errors
+
+APK status:
+A verified APK was NOT compiled in this runtime because the container does not
+contain the Android SDK/Build Tools/Gradle dependencies and outbound binary
+network access is blocked, so those required build artifacts cannot be fetched.
+
+To build a verified APK:
+1. Android Studio: open this directory and Build > Build APK(s), or
+2. GitHub Actions: push the repository; workflow .github/workflows/android-build.yml
+   installs Android SDK 37 + Build Tools 36.0.0, runs tests and assembleDebug,
+   then uploads artifact MNC-BF-Alpha-0.2-debug containing app-debug.apk.
+
+Expected local APK path after a successful build:
+app/build/outputs/apk/debug/app-debug.apk
